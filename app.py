@@ -17,58 +17,40 @@ def load_model():
 
 st.title("🧴 SKIN AI")
 st.subheader("AI 화장품 소비자 관심도 예측")
-st.write("제품 정보를 입력하면 AI가 예상 소비자 관심도를 분석합니다.")
+st.write("제품 정보를 입력하면 예상 소비자 관심도를 분석합니다.")
 
 try:
     model = load_model()
     domain = model.domain
     attributes = domain.attributes
-
     variables = {v.name: v for v in attributes}
 
-    st.divider()
-    st.header("제품 정보 입력")
-
     with st.form("prediction_form"):
+        st.header("제품 정보 입력")
 
         price = st.number_input(
-            "제품 가격 ($)",
-            min_value=0.0,
-            value=30.0
+            "제품 가격 ($)", min_value=0.0, value=30.0
         )
 
         rating = st.slider(
-            "예상 평점",
-            min_value=0.0,
-            max_value=5.0,
-            value=4.5,
-            step=0.1
+            "예상 평점", 0.0, 5.0, 4.5, 0.1
         )
 
         reviews = st.number_input(
-            "예상 리뷰 수",
-            min_value=0,
-            value=100
+            "예상 리뷰 수", min_value=0, value=100
         )
 
         category_var = variables.get("secondary_category")
 
         if category_var and category_var.is_discrete:
             categories = list(category_var.values)
-            category = st.selectbox(
-                "화장품 종류",
-                categories
-            )
+            category = st.selectbox("화장품 종류", categories)
         else:
             category = None
 
-        submitted = st.form_submit_button(
-            "AI 예측하기",
-            use_container_width=True
-        )
+        submitted = st.form_submit_button("AI 예측하기")
 
     if submitted:
-
         inputs = {
             "price_usd": price,
             "rating": rating,
@@ -80,7 +62,6 @@ try:
         row = []
 
         for var in attributes:
-
             value = inputs.get(var.name)
 
             if var.is_discrete:
@@ -90,15 +71,22 @@ try:
                     value = options[0]
 
                 row.append(float(options.index(str(value))))
-
             else:
                 row.append(
                     float(value) if value is not None else 0.0
                 )
 
-        data = Orange.data.Table(
+        X = np.array([row], dtype=float)
+
+        Y = np.full(
+            (1, len(domain.class_vars)),
+            np.nan
+        )
+
+        data = Orange.data.Table.from_numpy(
             domain,
-            np.array([row], dtype=float)
+            X=X,
+            Y=Y
         )
 
         prediction = float(model(data)[0])
@@ -112,10 +100,12 @@ try:
         )
 
         st.caption(
-            "좋아요 수를 기반으로 예측한 관심도입니다. "
-            "실제 판매량이나 구매량을 의미하지 않습니다."
+            "좋아요 수를 기반으로 예측한 관심도이며 "
+            "실제 판매량이나 구매량은 아닙니다."
         )
 
 except Exception as e:
     st.error(f"모델을 불러오거나 예측하는 중 오류가 발생했습니다: {e}")
+
+
 
